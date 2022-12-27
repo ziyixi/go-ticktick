@@ -2,6 +2,7 @@ package ticktick
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/carlmjohnson/requests"
@@ -9,21 +10,21 @@ import (
 )
 
 const (
-	BaseUrlV2       = "https://api.dida365.com/api/v2"
-	SigninUrl       = BaseUrlV2 + "/user/signin"
-	SettingUrl      = BaseUrlV2 + "/user/preferences/settings"
-	InitialBatchUrl = BaseUrlV2 + "/batch/check/0"
+	baseUrlV2       = "https://api.dida365.com/api/v2"
+	signinUrl       = baseUrlV2 + "/user/signin"
+	settingUrl      = baseUrlV2 + "/user/preferences/settings"
+	initialBatchUrl = baseUrlV2 + "/batch/check/0"
 )
 
 type Client struct {
 	UserName string
 	PassWord string
 
-	token           string
+	loginToken      string
 	inboxId         string
 	projectGroups   []projectGroupsItem
-	projectProfiles []projectProfilesItem
-	tasks           []taskItem
+	projectProfiles map[string]string
+	tasks           []TaskItem
 	tags            []string
 }
 
@@ -32,20 +33,12 @@ type projectGroupsItem struct {
 	name string
 }
 
-type projectProfilesItem struct {
-	id   string
-	name string
-}
-
-type taskItem struct {
-	id        string
-	projectId string
-	title     string
-	startDate string
-	dueDate   string
-	isAllDay  bool
-	priority  int64
-	tags      []string
+func NewClient(userName, passWord string) (*Client, error) {
+	client := &Client{UserName: userName, PassWord: passWord, projectProfiles: make(map[string]string)}
+	if err := client.Init(); err != nil {
+		return nil, err
+	}
+	return client, nil
 }
 
 // init the client struct (login, sync)
@@ -68,27 +61,28 @@ func (c *Client) GetToken() error {
 	var resp string
 
 	if err := requests.
-		URL(SigninUrl).
+		URL(signinUrl).
 		BodyJSON(&body).
 		ToString(&resp).
 		Fetch(context.Background()); err != nil {
 		return err
 	}
 
-	token := gjson.Get(resp, "token").String()
-	if token == "" {
+	loginToken := gjson.Get(resp, "token").String()
+	if loginToken == "" {
 		return fmt.Errorf("no token found in the response, full response json is %v", resp)
 	}
-	c.token = token
+	c.loginToken = loginToken
 	return nil
 }
 
+// fetch all the user contents
 func (c *Client) Sync() error {
 	var resp string
 
 	if err := requests.
-		URL(InitialBatchUrl).
-		Cookie("t", c.token).
+		URL(initialBatchUrl).
+		Cookie("t", c.loginToken).
 		ToString(&resp).
 		Fetch(context.Background()); err != nil {
 		return err
@@ -104,42 +98,21 @@ func (c *Client) Sync() error {
 		return true
 	})
 	gjson.Get(resp, "projectProfiles").ForEach(func(key, value gjson.Result) bool {
-		c.projectProfiles = append(c.projectProfiles, projectProfilesItem{
-			id:   value.Get("id").String(),
-			name: value.Get("name").String(),
-		})
+		c.projectProfiles[value.Get("name").String()] = value.Get("id").String()
 		return true
 	})
 	gjson.Get(resp, "syncTaskBean.update").ForEach(func(key, value gjson.Result) bool {
-		var tags []string
-		value.Get("tags").ForEach(func(_, tv gjson.Result) bool {
-			tags = append(tags, tv.String())
-			return true
-		})
-
-		if kind := value.Get("kind").String(); kind != "NOTE" {
-			c.tasks = append(c.tasks, taskItem{
-				id:        value.Get("id").String(),
-				projectId: value.Get("projectId").String(),
-				title:     value.Get("title").String(),
-				startDate: value.Get("startDate").String(),
-				dueDate:   value.Get("dueDate").String(),
-				isAllDay:  value.Get("isAllDay").Bool(),
-				priority:  value.Get("priority").Int(),
-				tags:      tags,
-			})
+		var t TaskItem
+		if err := json.Unmarshal([]byte(value.Raw), &t); err != nil {
+			panic("task Unmarshal failed for " + value.Raw)
 		}
+		c.tasks = append(c.tasks, t)
 		return true
 	})
 	gjson.Get(resp, "tags").ForEach(func(key, value gjson.Result) bool {
 		c.tags = append(c.tags, value.Get("name").String())
 		return true
 	})
-
-	// for _, v := range c.tasks {
-	// 	fmt.Println(v)
-	// }
-	fmt.Println(c.tags)
 
 	return nil
 }
