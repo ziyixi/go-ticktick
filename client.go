@@ -10,10 +10,10 @@ import (
 )
 
 const (
-	baseUrlV2       = "https://api.dida365.com/api/v2"
-	signinUrl       = baseUrlV2 + "/user/signin"
-	settingUrl      = baseUrlV2 + "/user/preferences/settings"
-	initialBatchUrl = baseUrlV2 + "/batch/check/0"
+	baseUrlV2             = "https://api.dida365.com/api/v2"
+	signinUrl             = baseUrlV2 + "/user/signin"               // POST
+	settingUrl            = baseUrlV2 + "/user/preferences/settings" // POST
+	queryUnfinishedJobUrl = baseUrlV2 + "/batch/check/0"             // GET
 )
 
 type Client struct {
@@ -82,7 +82,7 @@ func (c *Client) Sync() error {
 	var resp string
 
 	if err := requests.
-		URL(initialBatchUrl).
+		URL(queryUnfinishedJobUrl).
 		Cookie("t", c.loginToken).
 		ToString(&resp).
 		Fetch(context.Background()); err != nil {
