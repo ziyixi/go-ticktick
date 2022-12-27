@@ -20,12 +20,13 @@ type Client struct {
 	UserName string
 	PassWord string
 
-	loginToken      string
-	inboxId         string
-	projectGroups   []projectGroupsItem
-	projectProfiles map[string]string
-	tasks           []TaskItem
-	tags            []string
+	loginToken    string
+	inboxId       string
+	projectGroups []projectGroupsItem
+	project2Id    map[string]string
+	id2Project    map[string]string
+	tasks         []TaskItem
+	tags          []string
 }
 
 type projectGroupsItem struct {
@@ -34,7 +35,7 @@ type projectGroupsItem struct {
 }
 
 func NewClient(userName, passWord string) (*Client, error) {
-	client := &Client{UserName: userName, PassWord: passWord, projectProfiles: make(map[string]string)}
+	client := &Client{UserName: userName, PassWord: passWord, project2Id: make(map[string]string), id2Project: make(map[string]string)}
 	if err := client.Init(); err != nil {
 		return nil, err
 	}
@@ -90,6 +91,8 @@ func (c *Client) Sync() error {
 
 	// below we assume the apis are stable
 	c.inboxId = gjson.Get(resp, "inboxId").String()
+
+	c.projectGroups = nil
 	gjson.Get(resp, "projectGroups").ForEach(func(key, value gjson.Result) bool {
 		c.projectGroups = append(c.projectGroups, projectGroupsItem{
 			id:   value.Get("id").String(),
@@ -97,18 +100,29 @@ func (c *Client) Sync() error {
 		})
 		return true
 	})
+
+	c.project2Id = make(map[string]string)
+	c.project2Id["inbox"] = c.inboxId
+	c.id2Project = make(map[string]string)
+	c.id2Project[c.inboxId] = "inbox"
 	gjson.Get(resp, "projectProfiles").ForEach(func(key, value gjson.Result) bool {
-		c.projectProfiles[value.Get("name").String()] = value.Get("id").String()
+		c.project2Id[value.Get("name").String()] = value.Get("id").String()
+		c.id2Project[value.Get("id").String()] = value.Get("name").String()
 		return true
 	})
+
+	c.tasks = nil
 	gjson.Get(resp, "syncTaskBean.update").ForEach(func(key, value gjson.Result) bool {
 		var t TaskItem
 		if err := json.Unmarshal([]byte(value.Raw), &t); err != nil {
 			panic("task Unmarshal failed for " + value.Raw)
 		}
+		t.ProjectName = c.id2Project[t.ProjectId]
 		c.tasks = append(c.tasks, t)
 		return true
 	})
+
+	c.tags = nil
 	gjson.Get(resp, "tags").ForEach(func(key, value gjson.Result) bool {
 		c.tags = append(c.tags, value.Get("name").String())
 		return true
