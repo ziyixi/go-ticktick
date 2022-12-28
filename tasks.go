@@ -175,8 +175,9 @@ func (c *Client) UpdateTask(t *TaskItem) (*TaskItem, error) {
 
 // Complete task, as complete has no field
 func (c *Client) CompleteTask(t *TaskItem) (*TaskItem, error) {
-	t.Status = 2
-	return c.UpdateTask(t)
+	newt := *t
+	newt.Status = 2
+	return c.UpdateTask(&newt)
 }
 
 // Make subtask, p is the parent, t is the child, return the parent and child tasks
@@ -190,11 +191,10 @@ func (c *Client) MakeSubtask(p, t *TaskItem) (*TaskItem, *TaskItem, error) {
 
 	// if p and t not in the same project, move t to p's project
 	if p.ProjectId != t.ProjectId {
-		newt, err := c.UpdateTask(t)
+		newt, err := c.MoveTask(t, p.ProjectName)
 		if err != nil {
 			return nil, nil, err
 		}
-		fmt.Println("@@@", newt)
 		t = newt
 	}
 
@@ -237,7 +237,37 @@ func (c *Client) MakeSubtask(p, t *TaskItem) (*TaskItem, *TaskItem, error) {
 	return &newPList[0], &newCList[0], nil
 }
 
-// Move task to another project, as updating projectId has no effect
-// func (c *Client) MoveTask(t *TaskItem, from string, to string) (*TaskItem, error) {
+// Move task to another project, as directly updating projectId has no effect
+func (c *Client) MoveTask(t *TaskItem, to string) (*TaskItem, error) {
+	if t.ProjectName == to {
+		return t, nil
+	}
+	toId, ok := c.project2Id[to]
+	if !ok {
+		return nil, fmt.Errorf("the project name %v not exist", to)
+	}
 
-// }
+	type bodyElement struct {
+		FromProjectId string `json:"fromProjectId"`
+		TaskId        string `json:"taskId"`
+		ToProjectId   string `json:"toProjectId"`
+	}
+	var body []bodyElement
+	body = append(body, bodyElement{
+		FromProjectId: t.ProjectId,
+		TaskId:        t.Id,
+		ToProjectId:   toId,
+	})
+
+	if err := requests.
+		URL(MoveTaskUrl).
+		Cookie("t", c.loginToken).
+		BodyJSON(body).
+		Fetch(context.Background()); err != nil {
+		return nil, err
+	}
+
+	newt := *t
+	newt.ProjectId = toId
+	return &newt, nil
+}
