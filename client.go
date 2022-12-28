@@ -20,13 +20,17 @@ type Client struct {
 	UserName string
 	PassWord string
 
-	loginToken    string
-	inboxId       string
+	loginToken string
+	inboxId    string
+
 	projectGroups []projectGroupsItem
-	project2Id    map[string]string
-	id2Project    map[string]string
-	tasks         []TaskItem
-	tags          []string
+
+	projectName2Id map[string]string
+	id2ProjectName map[string]string
+
+	tasks []TaskItem
+
+	tags []string
 }
 
 type projectGroupsItem struct {
@@ -35,7 +39,7 @@ type projectGroupsItem struct {
 }
 
 func NewClient(userName, passWord string) (*Client, error) {
-	client := &Client{UserName: userName, PassWord: passWord, project2Id: make(map[string]string), id2Project: make(map[string]string)}
+	client := &Client{UserName: userName, PassWord: passWord, projectName2Id: make(map[string]string), id2ProjectName: make(map[string]string)}
 	if err := client.Init(); err != nil {
 		return nil, err
 	}
@@ -101,13 +105,13 @@ func (c *Client) Sync() error {
 		return true
 	})
 
-	c.project2Id = make(map[string]string)
-	c.project2Id["inbox"] = c.inboxId
-	c.id2Project = make(map[string]string)
-	c.id2Project[c.inboxId] = "inbox"
+	c.projectName2Id = make(map[string]string)
+	c.projectName2Id["inbox"] = c.inboxId
+	c.id2ProjectName = make(map[string]string)
+	c.id2ProjectName[c.inboxId] = "inbox"
 	gjson.Get(resp, "projectProfiles").ForEach(func(key, value gjson.Result) bool {
-		c.project2Id[value.Get("name").String()] = value.Get("id").String()
-		c.id2Project[value.Get("id").String()] = value.Get("name").String()
+		c.projectName2Id[value.Get("name").String()] = value.Get("id").String()
+		c.id2ProjectName[value.Get("id").String()] = value.Get("name").String()
 		return true
 	})
 
@@ -117,7 +121,7 @@ func (c *Client) Sync() error {
 		if err := json.Unmarshal([]byte(value.Raw), &t); err != nil {
 			panic("task Unmarshal failed for " + value.Raw)
 		}
-		t.ProjectName = c.id2Project[t.ProjectId]
+		t.ProjectName = c.id2ProjectName[t.ProjectId]
 		c.tasks = append(c.tasks, t)
 		return true
 	})

@@ -44,7 +44,7 @@ type TaskItem struct {
 func NewTask(c *Client, title string, content string, startDate time.Time, projectName string) (*TaskItem, error) {
 	projectId := ""
 	if projectName != "" {
-		pid, ok := c.project2Id[projectName]
+		pid, ok := c.projectName2Id[projectName]
 		if !ok {
 			return nil, fmt.Errorf("projectName %v not found", projectName)
 		} else {
@@ -76,7 +76,7 @@ func (c *Client) CreateTask(t *TaskItem) (*TaskItem, error) {
 		return nil, err
 	}
 
-	resp.ProjectName = c.id2Project[resp.ProjectId]
+	resp.ProjectName = c.id2ProjectName[resp.ProjectId]
 	return &resp, nil
 }
 
@@ -133,7 +133,7 @@ func (c *Client) SearchTask(title string, project string, tag string, id string,
 		if !(strings.Contains(task.Title, title)) {
 			continue
 		}
-		if expectPId, ok := c.project2Id[project]; (project != "") && (!ok || expectPId != task.ProjectId) {
+		if expectPId, ok := c.projectName2Id[project]; (project != "") && (!ok || expectPId != task.ProjectId) {
 			continue
 		}
 		if tag != "" && !Contains(task.Tags, tag) {
@@ -169,7 +169,7 @@ func (c *Client) UpdateTask(t *TaskItem) (*TaskItem, error) {
 		return nil, err
 	}
 
-	resp.ProjectName = c.id2Project[resp.ProjectId]
+	resp.ProjectName = c.id2ProjectName[resp.ProjectId]
 	return &resp, nil
 }
 
@@ -242,7 +242,7 @@ func (c *Client) MoveTask(t *TaskItem, to string) (*TaskItem, error) {
 	if t.ProjectName == to {
 		return t, nil
 	}
-	toId, ok := c.project2Id[to]
+	toId, ok := c.projectName2Id[to]
 	if !ok {
 		return nil, fmt.Errorf("the project name %v not exist", to)
 	}
