@@ -51,10 +51,16 @@ func NewTask(c *Client, title string, content string, startDate time.Time, proje
 			projectId = pid
 		}
 	}
+
+	startDateString := ""
+	if !startDate.IsZero() {
+		startDateString = startDate.Format(TemplateTime)
+	}
+
 	t := TaskItem{
 		Title:       title,
 		Content:     content,
-		StartDate:   startDate.Format(TemplateTime),
+		StartDate:   startDateString,
 		ProjectId:   projectId,
 		ProjectName: projectName,
 	}
@@ -99,10 +105,6 @@ func (c *Client) DeleteTask(t *TaskItem) (*TaskItem, error) {
 				TaskId:    t.Id,
 			},
 		},
-	}
-
-	if body.Delete[0].ProjectId == "inbox" {
-		body.Delete[0].ProjectId = c.inboxId
 	}
 
 	if err := requests.

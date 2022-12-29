@@ -46,32 +46,51 @@ func BuildSyncResponse() *TestSyncResponse {
 		},
 		ProjectProfiles: []TestProjectItem{
 			{
-				Name: "ppname1",
-				Id:   "ppid1",
+				Name: "pname1",
+				Id:   "pid1",
 			},
 			{
-				Name: "ppname2",
-				Id:   "ppid2",
+				Name: "pname2",
+				Id:   "pid2",
 			},
 		},
 		SyncTaskBean: testsyncTask{
 			Update: []TaskItem{
 				{
-					Id:    "1",
-					Title: "1",
+					Id:        "1",
+					Title:     "1",
+					ProjectId: "pid1",
+					Tags:      []string{"a", "b"},
+					StartDate: "2022-12-12T15:04:05.000+0000",
+					Priority:  5,
 				},
 				{
-					Id:    "2",
-					Title: "2",
+					Id:        "2",
+					Title:     "2",
+					ProjectId: "pid1",
+					Tags:      []string{"b", "c"},
+					StartDate: "2022-12-13T15:04:05.000+0000",
+					Priority:  0,
+				},
+				{
+					Id:        "3",
+					Title:     "3",
+					ProjectId: "pid2",
+					Tags:      []string{"b", "c"},
+					StartDate: "2022-12-14T15:04:05.000+0000",
+					Priority:  1,
 				},
 			},
 		},
 		Tags: []TestTagItem{
 			{
-				Name: "tag1",
+				Name: "a",
 			},
 			{
-				Name: "tag1",
+				Name: "b",
+			},
+			{
+				Name: "c",
 			},
 		},
 	}
