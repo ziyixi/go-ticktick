@@ -10,11 +10,11 @@ import (
 )
 
 const (
-	taskCreateUrl  = baseUrlV2 + "/task"              // POST
-	taskDeleteUrl  = baseUrlV2 + "/batch/task"        // POST
-	taskUpdateUrl  = baseUrlV2 + "/task/%v"           // POST
-	MakeSubtaskUrl = baseUrlV2 + "/batch/taskParent"  // POST
-	MoveTaskUrl    = baseUrlV2 + "/batch/taskProject" // POST
+	taskCreateUrlEndpoint  = "/task"              // POST
+	taskDeleteUrlEndpoint  = "/batch/task"        // POST
+	taskUpdateUrlEndpoint  = "/task/%v"           // POST
+	MakeSubtaskUrlEndpoint = "/batch/taskParent"  // POST
+	MoveTaskUrlEndpoint    = "/batch/taskProject" // POST
 )
 
 type TaskItem struct {
@@ -68,7 +68,7 @@ func (c *Client) CreateTask(t *TaskItem) (*TaskItem, error) {
 	}
 	var resp TaskItem
 	if err := requests.
-		URL(taskCreateUrl).
+		URL(c.baseUrlV2+taskCreateUrlEndpoint).
 		Cookie("t", c.loginToken).
 		BodyJSON(t).
 		ToJSON(&resp).
@@ -106,7 +106,7 @@ func (c *Client) DeleteTask(t *TaskItem) (*TaskItem, error) {
 	}
 
 	if err := requests.
-		URL(taskDeleteUrl).
+		URL(c.baseUrlV2+taskDeleteUrlEndpoint).
 		Cookie("t", c.loginToken).
 		BodyJSON(&body).
 		Fetch(context.Background()); err != nil {
@@ -161,7 +161,7 @@ func (c *Client) UpdateTask(t *TaskItem) (*TaskItem, error) {
 	}
 	var resp TaskItem
 	if err := requests.
-		URL(fmt.Sprintf(taskUpdateUrl, t.Id)).
+		URL(fmt.Sprintf(c.baseUrlV2+taskUpdateUrlEndpoint, t.Id)).
 		Cookie("t", c.loginToken).
 		BodyJSON(t).
 		ToJSON(&resp).
@@ -211,7 +211,7 @@ func (c *Client) MakeSubtask(p, t *TaskItem) (*TaskItem, *TaskItem, error) {
 	})
 
 	if err := requests.
-		URL(MakeSubtaskUrl).
+		URL(c.baseUrlV2+MakeSubtaskUrlEndpoint).
 		Cookie("t", c.loginToken).
 		BodyJSON(body).
 		Fetch(context.Background()); err != nil {
@@ -260,7 +260,7 @@ func (c *Client) MoveTask(t *TaskItem, to string) (*TaskItem, error) {
 	})
 
 	if err := requests.
-		URL(MoveTaskUrl).
+		URL(c.baseUrlV2+MoveTaskUrlEndpoint).
 		Cookie("t", c.loginToken).
 		BodyJSON(body).
 		Fetch(context.Background()); err != nil {

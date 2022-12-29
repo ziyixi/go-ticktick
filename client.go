@@ -10,15 +10,17 @@ import (
 )
 
 const (
-	baseUrlV2             = "https://api.dida365.com/api/v2"
-	signinUrl             = baseUrlV2 + "/user/signin"               // POST
-	settingUrl            = baseUrlV2 + "/user/preferences/settings" // POST
-	queryUnfinishedJobUrl = baseUrlV2 + "/batch/check/0"             // GET
+	baseUrlV2Dida365              = "https://api.dida365.com/api/v2"
+	baseUrlV2Ticktick             = "https://api.ticktick.com/api/v2"
+	baseUrlV2Test                 = "https://api.test.com/api/v2"
+	signinUrlEndpoint             = "/user/signin"   // POST
+	queryUnfinishedJobUrlEndpoint = "/batch/check/0" // GET
 )
 
 type Client struct {
-	UserName string
-	PassWord string
+	UserName  string
+	PassWord  string
+	baseUrlV2 string
 
 	loginToken string
 	inboxId    string
@@ -38,8 +40,21 @@ type projectGroupsItem struct {
 	name string
 }
 
-func NewClient(userName, passWord string) (*Client, error) {
-	client := &Client{UserName: userName, PassWord: passWord, projectName2Id: make(map[string]string), id2ProjectName: make(map[string]string)}
+// create a new client, the server can be ticktick, dida365, test
+func NewClient(userName, passWord, server string) (*Client, error) {
+	var baseUrlV2 string
+	switch server {
+	case "ticktick":
+		baseUrlV2 = baseUrlV2Ticktick
+	case "dida365":
+		baseUrlV2 = baseUrlV2Dida365
+	case "test":
+		baseUrlV2 = baseUrlV2Test
+	default:
+		return nil, fmt.Errorf("server name %v is not supported", server)
+	}
+
+	client := &Client{UserName: userName, PassWord: passWord, baseUrlV2: baseUrlV2, projectName2Id: make(map[string]string), id2ProjectName: make(map[string]string)}
 	if err := client.Init(); err != nil {
 		return nil, err
 	}
@@ -66,7 +81,7 @@ func (c *Client) GetToken() error {
 	var resp string
 
 	if err := requests.
-		URL(signinUrl).
+		URL(c.baseUrlV2 + signinUrlEndpoint).
 		BodyJSON(&body).
 		ToString(&resp).
 		Fetch(context.Background()); err != nil {
@@ -86,7 +101,7 @@ func (c *Client) Sync() error {
 	var resp string
 
 	if err := requests.
-		URL(queryUnfinishedJobUrl).
+		URL(c.baseUrlV2+queryUnfinishedJobUrlEndpoint).
 		Cookie("t", c.loginToken).
 		ToString(&resp).
 		Fetch(context.Background()); err != nil {
@@ -118,9 +133,7 @@ func (c *Client) Sync() error {
 	c.tasks = nil
 	gjson.Get(resp, "syncTaskBean.update").ForEach(func(key, value gjson.Result) bool {
 		var t TaskItem
-		if err := json.Unmarshal([]byte(value.Raw), &t); err != nil {
-			panic("task Unmarshal failed for " + value.Raw)
-		}
+		json.Unmarshal([]byte(value.Raw), &t)
 		t.ProjectName = c.id2ProjectName[t.ProjectId]
 		c.tasks = append(c.tasks, t)
 		return true
