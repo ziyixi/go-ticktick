@@ -13,8 +13,8 @@ const (
 	baseUrlV2Dida365              = "https://api.dida365.com/api/v2"
 	baseUrlV2Ticktick             = "https://api.ticktick.com/api/v2"
 	baseUrlV2Test                 = "https://api.test.com/api/v2"
-	signinUrlEndpoint             = "/user/signin"   // POST
-	queryUnfinishedJobUrlEndpoint = "/batch/check/0" // GET
+	signinUrlEndpoint             = "/user/signon?wc=true&remember=true" // POST
+	queryUnfinishedJobUrlEndpoint = "/batch/check/0"                     // GET
 )
 
 type Client struct {
