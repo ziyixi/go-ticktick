@@ -81,9 +81,10 @@ func (c *Client) GetToken() error {
 	var resp string
 
 	if err := requests.
-		URL(c.baseUrlV2 + signinUrlEndpoint).
+		URL(c.baseUrlV2+signinUrlEndpoint).
 		BodyJSON(&body).
 		ToString(&resp).
+		Header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:123.0) Gecko/20100101 Firefox/123.0").
 		Fetch(context.Background()); err != nil {
 		return err
 	}
